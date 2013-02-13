@@ -9,7 +9,7 @@ function hm_add_term_meta_table() {
 
 	global $wpdb;
 
-	if ( ! current_theme_supports( 'term-meta' ) )
+	if ( ! current_theme_supports( 'term-meta' ) || defined( 'WP_INSTALLING' ) )
 		return false;
 
 	hm_create_term_meta_table();
