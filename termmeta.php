@@ -154,3 +154,22 @@ function update_termmeta_cache( $term_ids ) {
     return update_meta_cache( 'term', $term_ids );
 }
 endif;
+
+function hm_add_term_meta_query_support( $pieces, $taxonomies, $args ) {
+	if ( empty( $args['meta_query'] ) ) {
+		return $pieces;
+	}
+
+	$meta_query = new WP_Meta_Query( $args['meta_query'] );
+
+	$sql = $meta_query->get_sql( 'term', 't', 'term_id' );
+
+	if ( ! $sql ) {
+		return $pieces;
+	}
+
+	$pieces['join'] .= $sql['join'];
+	$pieces['where'] .= $sql['where'];
+	
+	return $pieces;
+}
