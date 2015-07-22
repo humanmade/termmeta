@@ -174,6 +174,35 @@ function hm_add_term_meta_query_support( $pieces, $taxonomies, $args ) {
 
 	$pieces['join'] .= $sql['join'];
 	$pieces['where'] .= $sql['where'];
-	
+
 	return $pieces;
 }
+
+/**
+ * Duplicate all meta from one term to the new one when it is split.
+ *
+ * For one reason or another, the initial design of this termmeta plugin stores
+ * meta against a term ID, rather than term_taxonomy_id, this was an incorrect
+ * design decision, however we now have to handle the backwards compatibility.
+ *
+ * If a shared term is split between two taxonomies, there is no way to determine what
+ * meta entries in the meta table are tied to which taxonomy's term. So, the only
+ * reliable solution is to duplicate all meta from the old term id to the new one, ensuring
+ * the new term has any potential meta it owns.
+ *
+ * @param  int $old_term_id
+ * @param  int $new_term_id
+ */
+function hm_duplicate_meta_on_split_term( $old_term_id, $new_term_id ) {
+
+	$meta = get_metadata( 'term', $old_term_id );
+
+	foreach ( $meta as $meta_key => $values ) {
+		foreach ( $values as $value ) {
+			$value = maybe_unserialize( $value );
+			add_term_meta( $new_term_id, $meta_key, $value );
+		}
+	}
+}
+
+add_action( 'split_shared_term', 'hm_duplicate_meta_on_split_term', 10, 2 );
