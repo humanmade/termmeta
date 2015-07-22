@@ -26,15 +26,14 @@ add_action( 'init', 'hm_add_term_meta_table' );
  * @todo should check if the table exists directly rather than relying on an option
  */
 function hm_create_term_meta_table() {
-	
-        global $wpdb;
+	global $wpdb;
 
 	// check if the table already exists
 	if ( get_option( 'hm_created_term_meta_table' ) )
 		return false;
 
 	$wpdb->query( "
-		CREATE TABLE `{$wpdb->prefix}termmeta` (
+		CREATE TABLE IF NOT EXISTS `{$wpdb->prefix}termmeta` (
 		  `meta_id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		  `term_id` bigint(20) unsigned NOT NULL DEFAULT '0',
 		  `meta_key` varchar(255) DEFAULT NULL,
@@ -60,7 +59,8 @@ if ( ! function_exists( 'add_term_meta' ) ) :
  * @return bool False for failure. True for success.
  */
 function add_term_meta( $term_id, $meta_key, $meta_value, $unique = false ) {
-    return add_metadata( 'term', $term_id, $meta_key, $meta_value, $unique );
+	wp_cache_set( 'last_changed', microtime(), 'terms' );
+	return add_metadata( 'term', $term_id, $meta_key, $meta_value, $unique );
 }
 endif;
 
@@ -78,7 +78,8 @@ if ( ! function_exists( 'delete_term_meta' ) ) :
  * @return bool False for failure. True for success.
  */
 function delete_term_meta( $term_id, $meta_key, $meta_value = '' ) {
-    return delete_metadata( 'term', $term_id, $meta_key, $meta_value );
+	wp_cache_set( 'last_changed', microtime(), 'terms' );
+	return delete_metadata( 'term', $term_id, $meta_key, $meta_value );
 }
 endif;
 
@@ -93,7 +94,7 @@ if ( ! function_exists( 'get_term_meta' ) ) :
  * is true.
  */
 function get_term_meta( $term_id, $key, $single = false ) {
-    return get_metadata( 'term', $term_id, $key, $single );
+	return get_metadata( 'term', $term_id, $key, $single );
 }
 endif;
 
@@ -113,7 +114,8 @@ if ( ! function_exists( 'update_term_meta' ) ) :
  * @return bool False on failure, true if success.
  */
 function update_term_meta( $term_id, $meta_key, $meta_value, $prev_value = '' ) {
-    return update_metadata( 'term', $term_id, $meta_key, $meta_value, $prev_value );
+	wp_cache_set( 'last_changed', microtime(), 'terms' );
+	return update_metadata( 'term', $term_id, $meta_key, $meta_value, $prev_value );
 }
 endif;
 
@@ -130,12 +132,12 @@ if ( ! function_exists( 'get_term_custom' ) ) :
  */
  function get_term_custom( $term_id = 0 ) {
 
-    $term_id = (int) $term_id;
+	$term_id = (int) $term_id;
 
-    if ( ! wp_cache_get( $term_id, 'term_meta' ) )
-        update_termmeta_cache( $term_id );
+	if ( ! wp_cache_get( $term_id, 'term_meta' ) )
+		update_termmeta_cache( $term_id );
 
-    return wp_cache_get( $term_id, 'term_meta' );
+	return wp_cache_get( $term_id, 'term_meta' );
 }
 endif;
 
@@ -151,9 +153,11 @@ if ( ! function_exists( 'update_termmeta_cache' ) ) :
 * @return bool|array Returns false if there is nothing to update or an array of metadata.
 */
 function update_termmeta_cache( $term_ids ) {
-    return update_meta_cache( 'term', $term_ids );
+	return update_meta_cache( 'term', $term_ids );
 }
 endif;
+
+add_filter( 'terms_clauses', 'hm_add_term_meta_query_support', 10, 3 );
 
 function hm_add_term_meta_query_support( $pieces, $taxonomies, $args ) {
 	if ( empty( $args['meta_query'] ) ) {
