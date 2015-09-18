@@ -179,6 +179,27 @@ function hm_add_term_meta_query_support( $pieces, $taxonomies, $args ) {
 }
 
 /**
+ * get_terms will cache based of it's defualt args, in the case of using
+ * meta queries, they get ignored if an existing cache was stored, as the meta
+ * query is not included in the cache key.
+ *
+ * Fortunatly we can make use of the cache_domain arg which essentially just
+ * becomes part of the cache key.
+ */
+function hm_add_get_terms_cache_key_modifications( $args ) {
+
+	if ( empty( $args['meta_query'] ) ) {
+		return $args;
+	}
+
+	$args['cache_domain'] .= serialize( $args['meta_query'] );
+
+	return $args;
+}
+
+add_filter( 'get_terms_args', 'hm_add_get_terms_cache_key_modifications' );
+
+/**
  * Duplicate all meta from one term to the new one when it is split.
  *
  * For one reason or another, the initial design of this termmeta plugin stores
