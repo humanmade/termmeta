@@ -1,5 +1,10 @@
 <?php
 
+global $wp_version;
+
+if ( version_compare( $wp_version, '4.4', '>=' ) ) {
+	return;
+}
 /**
  * Setup the termmeta table
  *
@@ -170,6 +175,28 @@ function hm_add_term_meta_query_support( $pieces, $taxonomies, $args ) {
 
 	if ( ! $sql ) {
 		return $pieces;
+	}
+	
+	// Support advanced meta ordering introduced in WP 4.2
+	if ( $args['orderby'] && method_exists( $meta_query, 'get_clauses' ) ) {
+		$orderby = $args['orderby'];
+		$meta_clauses = $meta_query->get_clauses();
+
+		$reserved_terms = array(
+			'id',
+			'count',
+			'name',
+			'slug',
+			'term_group',
+			'description',
+			'none',
+		);
+
+		if ( ! in_array( $orderby, $reserved_terms ) && array_key_exists( $orderby, $meta_clauses ) ) {
+			$meta_clause = $meta_clauses[ $orderby ];
+			$orderby_clause = "CAST({$meta_clause['alias']}.meta_value AS {$meta_clause['cast']})";
+			$pieces['orderby'] = "ORDER BY $orderby_clause";
+		}
 	}
 
 	$pieces['join'] .= $sql['join'];
